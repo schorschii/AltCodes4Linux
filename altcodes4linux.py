@@ -68,8 +68,9 @@ def main():
             if not currentAltCode: # might be an empty string
                 currentAltCode = None
                 continue
+            codepage = 'cp1252' if currentAltCode[0]=='0' else 'cp850'
             altCodeDec = int(currentAltCode)
-            altCodeChar = ord(altCodeDec.to_bytes(1, 'big').decode('cp850'))
+            altCodeChar = ord(altCodeDec.to_bytes(1, 'big').decode(codepage))
             altCodeHex = ('%0.2X' % altCodeChar).upper()
             print('ALTCODE: ', currentAltCode, '('+str(altCodeDec)+')', ' == ', chr(altCodeChar), ' --> ', '0x'+altCodeHex)
             currentAltCode = None

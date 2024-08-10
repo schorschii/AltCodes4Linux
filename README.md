@@ -2,7 +2,7 @@
 
 This script makes it possible to enter "alt codes" with a keyboard device on the Linux desktop as known from Windows.
 
-On Windows, when you hold the left ALT key and enter the **decimal** number of a char (ASCII/CP850) on the numpad, the corresponding char is inserted at the current position when releasing the ALT key. The behavior is different if you want to insert a special char on the Linux desktop: here, you need to press CTRL+SHIFT+u, followed by the **hexadecimal** Unicode code point and ENTER.
+On Windows, when you hold the left ALT key and enter the **decimal** number of a char (ASCII/cp850/cp1252) on the numpad, the corresponding char is inserted at the current position when releasing the ALT key. The behavior is different if you want to insert a special char on the Linux desktop: here, you need to press CTRL+SHIFT+u, followed by the **hexadecimal** Unicode code point and ENTER.
 
 This script captures the events of an input device and when recognizing alt codes, it converts them into appropriate keystrokes for the Linux desktop.
 
