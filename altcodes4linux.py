@@ -16,12 +16,12 @@ hexKeyMap = {
     '7': evdev.ecodes.KEY_7,
     '8': evdev.ecodes.KEY_8,
     '9': evdev.ecodes.KEY_9,
-    'a': evdev.ecodes.KEY_A,
-    'b': evdev.ecodes.KEY_B,
-    'c': evdev.ecodes.KEY_C,
-    'd': evdev.ecodes.KEY_D,
-    'e': evdev.ecodes.KEY_E,
-    'f': evdev.ecodes.KEY_F,
+    'A': evdev.ecodes.KEY_A,
+    'B': evdev.ecodes.KEY_B,
+    'C': evdev.ecodes.KEY_C,
+    'D': evdev.ecodes.KEY_D,
+    'E': evdev.ecodes.KEY_E,
+    'F': evdev.ecodes.KEY_F,
 }
 numpadKeyMap = {
     evdev.ecodes.KEY_KP0: '0',
@@ -69,10 +69,10 @@ def main():
                 currentAltCode = None
                 continue
             altCodeDec = int(currentAltCode)
-            altCodeChar = chr(altCodeDec)
-            altCodeHex = hex(altCodeDec)[2:]
+            altCodeChar = ord(altCodeDec.to_bytes(1, 'big').decode('cp850'))
+            altCodeHex = ('%0.2X' % altCodeChar).upper()
+            print('ALTCODE: ', currentAltCode, '('+str(altCodeDec)+')', ' == ', chr(altCodeChar), ' --> ', '0x'+altCodeHex)
             currentAltCode = None
-            print('ALTCODE:', currentAltCode, altCodeDec, altCodeChar, altCodeHex)
 
             # send Linux equivalent keystrokes CTRL+SHIFT+u+<hex>+ENTER
             vinput.write(evdev.ecodes.EV_KEY, evdev.ecodes.KEY_LEFTCTRL, 1)
