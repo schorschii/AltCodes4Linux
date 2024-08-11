@@ -39,7 +39,7 @@ numpadKeyMap = {
 def main():
     parser = argparse.ArgumentParser(
         description='Translate alt codes from input devices into hex code keystrokes which Linux desktops understand',
-        epilog='(c) Georg Sieber 2024'
+        epilog='(c) Georg Sieber 2024 - https://github.com/schorschii/AltCodes4Linux'
     )
     parser.add_argument('device', help='The input device file, e.g. /dev/input/event1 or /dev/input/by-id/usb-WHATEVER')
     args = parser.parse_args()
@@ -65,14 +65,23 @@ def main():
 
         # ALT key released - convert and emulate input
         elif keyEvent.scancode == evdev.ecodes.KEY_LEFTALT and keyEvent.keystate == 0:
-            if not currentAltCode: # might be an empty string
+            # currentAltCode might be empty
+            if not currentAltCode:
+                # forward ALT key press
+                vinput.write(evdev.ecodes.EV_KEY, keyEvent.scancode, 1)
+                vinput.syn()
+                vinput.write(evdev.ecodes.EV_KEY, keyEvent.scancode, 0)
+                vinput.syn()
+
                 currentAltCode = None
                 continue
+
+            # convert alt code to equivalent Unicode code point
             codepage = 'cp1252' if currentAltCode[0]=='0' else 'cp850'
             altCodeDec = int(currentAltCode)
             altCodeChar = ord(altCodeDec.to_bytes(1, 'big').decode(codepage))
             altCodeHex = ('%0.2X' % altCodeChar).upper()
-            print('ALTCODE: ', currentAltCode, '('+str(altCodeDec)+')', ' == ', chr(altCodeChar), ' --> ', '0x'+altCodeHex)
+            print('ALTCODE: ', currentAltCode, '('+str(altCodeDec)+')', ' ='+chr(altCodeChar)+'= ', ' --> ', '0x'+altCodeHex)
             currentAltCode = None
 
             # send Linux equivalent keystrokes CTRL+SHIFT+u+<hex>+ENTER
