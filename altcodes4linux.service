@@ -1,0 +1,11 @@
+[Unit]
+Description=AltCodes4Linux
+
+[Service]
+Type=simple
+ExecStart=/bin/bash -c "/usr/bin/altcodes4linux.py /dev/input/by-id/usb-FEIG_ELECTRONIC_GmbH_OBID_RFID-Reader*"
+Restart=on-failure
+RestartSec=4
+
+[Install]
+WantedBy=multi-user.target
