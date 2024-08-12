@@ -3,6 +3,7 @@
 import argparse
 import evdev
 import time
+import sys
 
 
 hexKeyMap = {
@@ -36,14 +37,7 @@ numpadKeyMap = {
     evdev.ecodes.KEY_KP9: '9',
 }
 
-def main():
-    parser = argparse.ArgumentParser(
-        description='Translate alt codes from input devices into hex code keystrokes which Linux desktops understand',
-        epilog='(c) Georg Sieber 2024 - https://github.com/schorschii/AltCodes4Linux'
-    )
-    parser.add_argument('device', help='The input device file, e.g. /dev/input/event1 or /dev/input/by-id/usb-WHATEVER')
-    args = parser.parse_args()
-
+def main(args):
     # open input device
     dev = evdev.InputDevice(args.device)
     dev.grab() # become the sole recipient of all incoming input events
@@ -118,10 +112,21 @@ def main():
     vinput.close()
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description='Translate alt codes from input devices into hex code keystrokes which Linux desktops understand',
+        epilog='(c) Georg Sieber 2024 - https://github.com/schorschii/AltCodes4Linux'
+    )
+    parser.add_argument('device', help='The input device file, e.g. /dev/input/event1 or /dev/input/by-id/usb-WHATEVER')
+    parser.add_argument('-d', '--daemon', action='store_true', help='Daemon mode, keep running if device is not yet connected or disconnected.')
+    args = parser.parse_args()
+
     while True:
         try:
-            main()
+            main(args)
         except (FileNotFoundError, OSError) as e:
-            # if device disconnected or not yet connected, try again in 1 sec
             print(type(e), e)
-            time.sleep(1)
+            if(args.daemon):
+                # if device disconnected or not yet connected, try again in 1 sec
+                time.sleep(1)
+            else:
+                sys.exit(1)
