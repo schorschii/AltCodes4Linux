@@ -120,7 +120,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Translate alt codes from input devices into hex code keystrokes which Linux desktops understand',
-        epilog='(c) Georg Sieber 2024 - https://github.com/schorschii/AltCodes4Linux'
+        epilog='(c) Georg Sieber 2024-2025 - https://github.com/schorschii/AltCodes4Linux'
     )
     parser.add_argument('device', help='The input device file, e.g. /dev/input/event1 or /dev/input/by-id/usb-WHATEVER')
     parser.add_argument('-d', '--daemon', action='store_true', help='Daemon mode, keep running if device is not yet connected or disconnected.')
