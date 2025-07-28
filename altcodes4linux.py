@@ -75,7 +75,7 @@ def main(args):
             altCodeDec = int(currentAltCode)
             altCodeChar = ord(altCodeDec.to_bytes(1, 'big').decode(codepage))
             altCodeHex = ('%0.2X' % altCodeChar).upper()
-            print('ALTCODE: ', currentAltCode, '('+str(altCodeDec)+')', ' ='+chr(altCodeChar)+'= ', ' --> ', '0x'+altCodeHex)
+            print('ALTCODE: ', currentAltCode, '('+str(altCodeDec)+')', ' --> ', '0x'+altCodeHex, ' [ '+chr(altCodeChar)+' ]')
             currentAltCode = None
 
             # send Linux equivalent keystrokes CTRL+SHIFT+u+<hex>+ENTER
@@ -122,6 +122,7 @@ if __name__ == '__main__':
 
     while True:
         try:
+            time.sleep(0.2)
             main(args)
         except (FileNotFoundError, OSError) as e:
             print(type(e), e)
