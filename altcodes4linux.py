@@ -57,14 +57,14 @@ def main(args):
         if keyEvent.scancode == evdev.ecodes.KEY_LEFTALT and keyEvent.keystate == 1:
             currentAltCode = ''
 
+            vinput.write(evdev.ecodes.EV_KEY, keyEvent.scancode, keyEvent.keystate)
+            vinput.syn()
+
         # ALT key released - convert and emulate input
         elif keyEvent.scancode == evdev.ecodes.KEY_LEFTALT and keyEvent.keystate == 0:
             # currentAltCode might be empty
             if not currentAltCode:
-                # forward ALT key press
-                vinput.write(evdev.ecodes.EV_KEY, keyEvent.scancode, 1)
-                vinput.syn()
-                vinput.write(evdev.ecodes.EV_KEY, keyEvent.scancode, 0)
+                vinput.write(evdev.ecodes.EV_KEY, keyEvent.scancode, keyEvent.keystate)
                 vinput.syn()
 
                 currentAltCode = None
@@ -96,6 +96,12 @@ def main(args):
             vinput.write(evdev.ecodes.EV_KEY, evdev.ecodes.KEY_ENTER, 1)
             vinput.syn()
             vinput.write(evdev.ecodes.EV_KEY, evdev.ecodes.KEY_ENTER, 0)
+            vinput.syn()
+
+            # ALT key is still pressed - press again to avoid opening menus
+            vinput.write(evdev.ecodes.EV_KEY, keyEvent.scancode, 1)
+            vinput.syn()
+            vinput.write(evdev.ecodes.EV_KEY, keyEvent.scancode, 0)
             vinput.syn()
 
         # write pressed numpad key into our currentAltCode buffer
