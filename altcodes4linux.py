@@ -76,6 +76,9 @@ def main(args):
                 altCodeDec = int(currentAltCode)
                 altCodeChar = ord(altCodeDec.to_bytes(1, 'big').decode(codepage))
                 altCodeHex = ('%0.2X' % altCodeChar).upper()
+                print('ALTCODE: ', currentAltCode, '('+str(altCodeDec)+')', ' --> ', '0x'+altCodeHex, ' [ '+chr(altCodeChar)+' ]')
+                currentAltCode = None
+
             except Exception as e:
                 print('ALTCODE: ', currentAltCode, ' not recognized --> ignored (',e,')')
                 currentAltCode = None
@@ -85,8 +88,6 @@ def main(args):
                 vinput.write(evdev.ecodes.EV_KEY, keyEvent.scancode, 0)
                 vinput.syn()
                 continue
-            print('ALTCODE: ', currentAltCode, '('+str(altCodeDec)+')', ' --> ', '0x'+altCodeHex, ' [ '+chr(altCodeChar)+' ]')
-            currentAltCode = None
 
             # send Linux equivalent keystrokes CTRL+SHIFT+u+<hex>+ENTER
             vinput.write(evdev.ecodes.EV_KEY, evdev.ecodes.KEY_LEFTCTRL, 1)
