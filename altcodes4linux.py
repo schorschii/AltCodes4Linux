@@ -72,6 +72,12 @@ def main(device):
                 currentAltCode = None
                 continue
 
+            # ALT key is still pressed - press again to avoid opening menus
+            vinput.write(evdev.ecodes.EV_KEY, keyEvent.scancode, 1)
+            vinput.syn()
+            vinput.write(evdev.ecodes.EV_KEY, keyEvent.scancode, 0)
+            vinput.syn()
+
             # convert alt code to equivalent Unicode code point
             codepage = 'cp1252' if currentAltCode[0]=='0' else 'cp850'
             try:
@@ -84,11 +90,6 @@ def main(device):
             except Exception as e:
                 print('ALTCODE: ', currentAltCode, ' not recognized --> ignored (',e,')')
                 currentAltCode = None
-                # ALT key is still pressed - press again to avoid opening menus
-                vinput.write(evdev.ecodes.EV_KEY, keyEvent.scancode, 1)
-                vinput.syn()
-                vinput.write(evdev.ecodes.EV_KEY, keyEvent.scancode, 0)
-                vinput.syn()
                 continue
 
             # send Linux equivalent keystrokes CTRL+SHIFT+u+<hex>+ENTER
@@ -109,12 +110,6 @@ def main(device):
             vinput.write(evdev.ecodes.EV_KEY, evdev.ecodes.KEY_ENTER, 1)
             vinput.syn()
             vinput.write(evdev.ecodes.EV_KEY, evdev.ecodes.KEY_ENTER, 0)
-            vinput.syn()
-
-            # ALT key is still pressed - press again to avoid opening menus
-            vinput.write(evdev.ecodes.EV_KEY, keyEvent.scancode, 1)
-            vinput.syn()
-            vinput.write(evdev.ecodes.EV_KEY, keyEvent.scancode, 0)
             vinput.syn()
 
         # write pressed numpad key into our currentAltCode buffer
@@ -154,6 +149,7 @@ if __name__ == '__main__':
                     sys.exit(1)
     else:
         # grab all devices
+        time.sleep(0.2)
         devices = [evdev.InputDevice(path) for path in evdev.list_devices()]
         for device in devices:
             caps = device.capabilities()
