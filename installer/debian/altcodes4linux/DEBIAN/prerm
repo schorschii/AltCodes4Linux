@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# exit on error
+set -e
+
+# source debconf library.
+#. /usr/share/debconf/confmodule
+
+systemctl stop altcodes4linux
+systemctl disable altcodes4linux
