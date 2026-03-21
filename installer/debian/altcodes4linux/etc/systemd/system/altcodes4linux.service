@@ -1,0 +1,12 @@
+[Unit]
+Description=AltCodes4Linux
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/altcodes4linux.py
+Restart=on-failure
+RestartSec=4
+
+[Install]
+WantedBy=multi-user.target
+

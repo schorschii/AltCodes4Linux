@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# exit on error
+set -e
+
+# source debconf library.
+#. /usr/share/debconf/confmodule
+
+systemctl daemon-reload
+systemctl enable altcodes4linux
+systemctl start altcodes4linux

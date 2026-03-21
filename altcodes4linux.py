@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
+import threading
 import argparse
+import signal
 import evdev
 import time
 import sys
@@ -37,9 +39,9 @@ numpadKeyMap = {
     evdev.ecodes.KEY_KP9: '9',
 }
 
-def main(args):
+def main(device):
     # open input device
-    dev = evdev.InputDevice(args.device)
+    dev = evdev.InputDevice(device)
     dev.grab() # become the sole recipient of all incoming input events
     print('Listening for alt codes on', dev)
 
@@ -131,20 +133,34 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Translate alt codes from input devices into hex code keystrokes which Linux desktops understand',
-        epilog='(c) Georg Sieber 2024-2025 - https://github.com/schorschii/AltCodes4Linux'
+        epilog='(c) Georg Sieber 2024-2026 - https://github.com/schorschii/AltCodes4Linux'
     )
-    parser.add_argument('device', help='The input device file, e.g. /dev/input/event1 or /dev/input/by-id/usb-WHATEVER')
+    parser.add_argument('device', nargs='?', help='The input device file, e.g. /dev/input/event1 or /dev/input/by-id/usb-WHATEVER. Omit it to listen on all keyboard devices (experimental).')
     parser.add_argument('-d', '--daemon', action='store_true', help='Daemon mode, keep running if device is not yet connected or disconnected.')
     args = parser.parse_args()
 
-    while True:
-        try:
-            time.sleep(0.2)
-            main(args)
-        except (FileNotFoundError, OSError) as e:
-            print(type(e), e)
-            if(args.daemon):
-                # if device disconnected or not yet connected, try again in 1 sec
-                time.sleep(1)
+    if(args.device):
+        # try to grab given device
+        while True:
+            try:
+                time.sleep(0.2)
+                main(args.device)
+            except (FileNotFoundError, OSError) as e:
+                print(type(e), e)
+                if(args.daemon):
+                    # if device disconnected or not yet connected, try again in 1 sec
+                    time.sleep(1)
+                else:
+                    sys.exit(1)
+    else:
+        # grab all devices
+        devices = [evdev.InputDevice(path) for path in evdev.list_devices()]
+        for device in devices:
+            caps = device.capabilities()
+            if(evdev.ecodes.KEY_ENTER in caps.get(evdev.ecodes.EV_KEY, [])
+            and evdev.ecodes.BTN_LEFT not in caps.get(evdev.ecodes.EV_KEY, [])):
+                thread = threading.Thread(target=main, args=[device.path], daemon=True)
+                thread.start()
             else:
-                sys.exit(1)
+                print('Skip (not a keyboard):', device)
+        signal.pause()

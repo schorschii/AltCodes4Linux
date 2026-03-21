@@ -1,0 +1,56 @@
+name: Release with packages
+
+on:
+  workflow_dispatch: # allow manual execution
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  create_release_deb: # used to identify the output in other jobs
+    name: Create Release with Debian package
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Get version name for Github release title
+        run: echo "VERSION=Version ${{ github.ref_name }}" >> $GITHUB_ENV
+
+      - name: Execute build
+        run: cd installer/debian/ && ./build.sh
+
+      - id: create_release
+        name: Create Github release
+        uses: actions/create-release@v1
+        env:
+          # this token is provided automatically by Actions with permissions declared above
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          draft: true # create a release draft - only the master of disaster is allowed to publish it
+          prerelease: false
+          release_name: ${{ env.VERSION }}
+          tag_name: ${{ github.ref }}
+
+      - name: Upload artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: installer/debian/altcodes4linux.deb
+          asset_name: altcodes4linux.deb
+          asset_content_type: application/vnd.debian.binary-package
+
+      - name: Share compiled translation files with other runner
+        uses: actions/upload-artifact@master
+        with:
+          name: translations
+          path: lang/
