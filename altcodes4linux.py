@@ -38,8 +38,56 @@ numpadKeyMap = {
     evdev.ecodes.KEY_KP8: '8',
     evdev.ecodes.KEY_KP9: '9',
 }
+altTimer = None
+altCodeTimer = None
+pressAlt = True
+pressEnter = False
+altCodeBuffer = []
+
+def sendAlt(vinput):
+    global pressAlt
+    if(pressAlt):
+        print('DELAYED ALT')
+        vinput.write(evdev.ecodes.EV_KEY, evdev.ecodes.KEY_LEFTALT, 1)
+        vinput.syn()
+        pressAlt = False
+
+def sendAltCode(vinput):
+    global altCodeBuffer, pressEnter
+    # send Linux equivalent keystrokes CTRL+SHIFT+u+<hex>+ENTER
+    for altCodeHex in altCodeBuffer:
+        vinput.write(evdev.ecodes.EV_KEY, evdev.ecodes.KEY_LEFTCTRL, 1)
+        vinput.write(evdev.ecodes.EV_KEY, evdev.ecodes.KEY_LEFTSHIFT, 1)
+        vinput.write(evdev.ecodes.EV_KEY, evdev.ecodes.KEY_U, 1)
+        vinput.syn()
+        vinput.write(evdev.ecodes.EV_KEY, evdev.ecodes.KEY_LEFTCTRL, 0)
+        vinput.write(evdev.ecodes.EV_KEY, evdev.ecodes.KEY_LEFTSHIFT, 0)
+        vinput.write(evdev.ecodes.EV_KEY, evdev.ecodes.KEY_U, 0)
+        vinput.syn(); time.sleep(0.01)
+        for char in altCodeHex:
+            if char in hexKeyMap.keys():
+                vinput.write(evdev.ecodes.EV_KEY, hexKeyMap[char], 1)
+                vinput.syn()
+                vinput.write(evdev.ecodes.EV_KEY, hexKeyMap[char], 0)
+                vinput.syn(); time.sleep(0.01)
+        vinput.write(evdev.ecodes.EV_KEY, evdev.ecodes.KEY_ENTER, 1)
+        vinput.syn()
+        vinput.write(evdev.ecodes.EV_KEY, evdev.ecodes.KEY_ENTER, 0)
+        vinput.syn(); time.sleep(0.01)
+    # exec delayed enter keystroke
+    if(pressEnter):
+        print('DELAYED ENTER')
+        vinput.write(evdev.ecodes.EV_KEY, evdev.ecodes.KEY_ENTER, 1)
+        vinput.syn()
+        vinput.write(evdev.ecodes.EV_KEY, evdev.ecodes.KEY_ENTER, 0)
+        vinput.syn()
+        pressEnter = False
+    # reset buffer
+    altCodeBuffer.clear()
 
 def main(device):
+    global altTimer, altCodeTimer, pressAlt, pressEnter
+
     # open input device
     dev = evdev.InputDevice(device)
     dev.grab() # become the sole recipient of all incoming input events
@@ -59,26 +107,31 @@ def main(device):
         if keyEvent.scancode == evdev.ecodes.KEY_LEFTALT and keyEvent.keystate == 1:
             currentAltCode = ''
 
+            # delay ALT key down event - send only if no numpad key is pressed within 0.5s
+            # this is for handling fast input of multiple alt codes, e.g. barcode scanners or RFID readers,
+            # to not open menus in Firefox and VScode
+            if(altTimer): altTimer.cancel()
+            altTimer = threading.Timer(0.5, sendAlt, (vinput,))
+            altTimer.start()
+            pressAlt = True
+
+        # ALT key released - convert and emulate unicode input
+        elif keyEvent.scancode == evdev.ecodes.KEY_LEFTALT and keyEvent.keystate == 0:
+            pressEnter = False
+
+            # when ALT key is released before altTimer started, send ALT key event immediately
+            if(altTimer):
+                altTimer.cancel()
+                sendAlt(vinput)
+
+            # ALT key is still pressed - press again to close opened menus in Firefox, VScode etc.
             vinput.write(evdev.ecodes.EV_KEY, keyEvent.scancode, keyEvent.keystate)
             vinput.syn()
 
-        # ALT key released - convert and emulate input
-        elif keyEvent.scancode == evdev.ecodes.KEY_LEFTALT and keyEvent.keystate == 0:
             # currentAltCode might be empty
             if not currentAltCode:
-                vinput.write(evdev.ecodes.EV_KEY, keyEvent.scancode, keyEvent.keystate)
-                vinput.syn()
-
                 currentAltCode = None
                 continue
-
-            # ALT key is still pressed - press again to avoid opening menus
-            vinput.write(evdev.ecodes.EV_KEY, keyEvent.scancode, keyEvent.keystate)
-            vinput.syn(); time.sleep(0.05)
-            vinput.write(evdev.ecodes.EV_KEY, keyEvent.scancode, 1)
-            vinput.syn()
-            vinput.write(evdev.ecodes.EV_KEY, keyEvent.scancode, 0)
-            vinput.syn(); time.sleep(0.05)
 
             # convert alt code to equivalent Unicode code point
             codepage = 'cp1252' if currentAltCode[0]=='0' else 'cp850'
@@ -86,6 +139,7 @@ def main(device):
                 altCodeDec = int(currentAltCode)
                 altCodeChar = ord(altCodeDec.to_bytes(1, 'big').decode(codepage))
                 altCodeHex = ('%0.2X' % altCodeChar).upper()
+                altCodeBuffer.append(altCodeHex)
                 print('ALTCODE: ', currentAltCode, '('+str(altCodeDec)+')', ' --> ', '0x'+altCodeHex, ' [ '+chr(altCodeChar)+' ]')
                 currentAltCode = None
 
@@ -94,31 +148,22 @@ def main(device):
                 currentAltCode = None
                 continue
 
-            # send Linux equivalent keystrokes CTRL+SHIFT+u+<hex>+ENTER
-            vinput.write(evdev.ecodes.EV_KEY, evdev.ecodes.KEY_LEFTCTRL, 1)
-            vinput.write(evdev.ecodes.EV_KEY, evdev.ecodes.KEY_LEFTSHIFT, 1)
-            vinput.write(evdev.ecodes.EV_KEY, evdev.ecodes.KEY_U, 1)
-            vinput.syn()
-            vinput.write(evdev.ecodes.EV_KEY, evdev.ecodes.KEY_LEFTCTRL, 0)
-            vinput.write(evdev.ecodes.EV_KEY, evdev.ecodes.KEY_LEFTSHIFT, 0)
-            vinput.write(evdev.ecodes.EV_KEY, evdev.ecodes.KEY_U, 0)
-            vinput.syn()
-            for char in altCodeHex:
-                if char in hexKeyMap.keys():
-                    vinput.write(evdev.ecodes.EV_KEY, hexKeyMap[char], 1)
-                    vinput.syn()
-                    vinput.write(evdev.ecodes.EV_KEY, hexKeyMap[char], 0)
-                    vinput.syn()
-            vinput.write(evdev.ecodes.EV_KEY, evdev.ecodes.KEY_ENTER, 1)
-            vinput.syn()
-            vinput.write(evdev.ecodes.EV_KEY, evdev.ecodes.KEY_ENTER, 0)
-            vinput.syn()
+            # delay sending captured alt codes - too fast unicode input may be garbled
+            if(altCodeTimer): altCodeTimer.cancel()
+            altCodeTimer = threading.Timer(0.2, sendAltCode, (vinput,))
+            altCodeTimer.start()
+
+        # delay enter press while writing unicode
+        elif keyEvent.scancode == evdev.ecodes.KEY_ENTER and altCodeBuffer:
+            pressEnter = True
 
         # write pressed numpad key into our currentAltCode buffer
-        elif keyEvent.scancode in numpadKeyMap and keyEvent.keystate == 1 and currentAltCode != None:
-            currentAltCode += numpadKeyMap[keyEvent.scancode]
-        elif keyEvent.scancode in numpadKeyMap and keyEvent.keystate == 0 and currentAltCode != None:
-            pass # discard numpad key up event when ALT is pressed
+        elif keyEvent.scancode in numpadKeyMap and currentAltCode != None:
+            if keyEvent.keystate == 1:
+                currentAltCode += numpadKeyMap[keyEvent.scancode]
+                pressAlt = False
+            elif keyEvent.keystate == 0:
+                pass # discard numpad key up event when typing an alt code
 
         # forward other key strokes
         else:
