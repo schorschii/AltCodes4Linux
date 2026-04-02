@@ -40,7 +40,7 @@ numpadKeyMap = {
 }
 altTimer = None
 altCodeTimer = None
-pressAlt = True
+pressAlt = False
 pressedAlt = False
 pressEnter = False
 altCodeBuffer = []
