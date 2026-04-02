@@ -47,7 +47,7 @@ altCodeBuffer = []
 
 def sendAlt(vinput):
     global pressAlt, pressedAlt
-    if(pressAlt):
+    if pressAlt:
         print('DELAYED ALT')
         vinput.write(evdev.ecodes.EV_KEY, evdev.ecodes.KEY_LEFTALT, 1)
         vinput.syn()
@@ -77,7 +77,7 @@ def sendAltCode(vinput):
         vinput.write(evdev.ecodes.EV_KEY, evdev.ecodes.KEY_ENTER, 0)
         vinput.syn(); time.sleep(0.01)
     # exec delayed enter keystroke
-    if(pressEnter):
+    if pressEnter:
         print('DELAYED ENTER')
         vinput.write(evdev.ecodes.EV_KEY, evdev.ecodes.KEY_ENTER, 1)
         vinput.syn()
@@ -112,7 +112,7 @@ def main(device):
             # delay ALT key down event - send only if no numpad key is pressed within 0.5s
             # this is for handling fast input of multiple alt codes, e.g. barcode scanners or RFID readers,
             # to not open menus in Firefox and VScode
-            if(altTimer): altTimer.cancel()
+            if altTimer: altTimer.cancel()
             altTimer = threading.Timer(0.5, sendAlt, (vinput,))
             altTimer.start()
             pressAlt = True
@@ -123,7 +123,7 @@ def main(device):
             pressEnter = False
 
             # when ALT key is released before altTimer fired, send ALT key down event immediately
-            if(altTimer):
+            if altTimer:
                 altTimer.cancel()
                 sendAlt(vinput)
 
@@ -156,7 +156,7 @@ def main(device):
                 continue
 
             # delay sending captured alt codes - too fast unicode input may be garbled
-            if(altCodeTimer): altCodeTimer.cancel()
+            if altCodeTimer: altCodeTimer.cancel()
             altCodeTimer = threading.Timer(0.2, sendAltCode, (vinput,))
             altCodeTimer.start()
 
@@ -177,8 +177,8 @@ def main(device):
             # if any other key than a numpad number is pressed within the altTimer,
             # we assume that it's not intended to enter an alt code but a shortcut with ALT
             # e.g. ALT+tab or ALT+F4
-            if(pressAlt and keyEvent.scancode != evdev.ecodes.KEY_LEFTALT):
-                if(altTimer): altTimer.cancel()
+            if pressAlt and keyEvent.scancode != evdev.ecodes.KEY_LEFTALT:
+                if altTimer: altTimer.cancel()
                 sendAlt(vinput)
 
             vinput.write(evdev.ecodes.EV_KEY, keyEvent.scancode, keyEvent.keystate)
@@ -195,7 +195,7 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--daemon', action='store_true', help='Daemon mode, keep running if device is not yet connected or disconnected.')
     args = parser.parse_args()
 
-    if(args.device):
+    if args.device:
         # try to grab given device
         while True:
             try:
@@ -203,7 +203,7 @@ if __name__ == '__main__':
                 main(args.device)
             except (FileNotFoundError, OSError) as e:
                 print(type(e), e)
-                if(args.daemon):
+                if args.daemon:
                     # if device disconnected or not yet connected, try again in 1 sec
                     time.sleep(1)
                 else:
