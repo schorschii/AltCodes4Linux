@@ -41,16 +41,18 @@ numpadKeyMap = {
 altTimer = None
 altCodeTimer = None
 pressAlt = True
+pressedAlt = False
 pressEnter = False
 altCodeBuffer = []
 
 def sendAlt(vinput):
-    global pressAlt
+    global pressAlt, pressedAlt
     if(pressAlt):
         print('DELAYED ALT')
         vinput.write(evdev.ecodes.EV_KEY, evdev.ecodes.KEY_LEFTALT, 1)
         vinput.syn()
         pressAlt = False
+        pressedAlt = True
 
 def sendAltCode(vinput):
     global altCodeBuffer, pressEnter
@@ -86,7 +88,7 @@ def sendAltCode(vinput):
     altCodeBuffer.clear()
 
 def main(device):
-    global altTimer, altCodeTimer, pressAlt, pressEnter
+    global altTimer, altCodeTimer, pressAlt, pressedAlt, pressEnter
 
     # open input device
     dev = evdev.InputDevice(device)
@@ -114,23 +116,28 @@ def main(device):
             altTimer = threading.Timer(0.5, sendAlt, (vinput,))
             altTimer.start()
             pressAlt = True
+            pressedAlt = False
 
         # ALT key released - convert and emulate unicode input
         elif keyEvent.scancode == evdev.ecodes.KEY_LEFTALT and keyEvent.keystate == 0:
             pressEnter = False
 
-            # when ALT key is released before altTimer started, send ALT key event immediately
+            # when ALT key is released before altTimer fired, send ALT key down event immediately
             if(altTimer):
                 altTimer.cancel()
                 sendAlt(vinput)
 
-            # ALT key is still pressed - press again to close opened menus in Firefox, VScode etc.
+            # ALT key is still pressed - forward key up event
             vinput.write(evdev.ecodes.EV_KEY, keyEvent.scancode, keyEvent.keystate)
             vinput.syn()
 
-            # currentAltCode might be empty
+            # do nothing if no number was entered on numpad
             if not currentAltCode:
                 currentAltCode = None
+                continue
+
+            # do nothing if delayed ALT key down event was already sent via altTimer
+            if pressedAlt:
                 continue
 
             # convert alt code to equivalent Unicode code point
@@ -163,10 +170,17 @@ def main(device):
                 currentAltCode += numpadKeyMap[keyEvent.scancode]
                 pressAlt = False
             elif keyEvent.keystate == 0:
-                pass # discard numpad key up event when typing an alt code
+                pass # discard numpad key event when typing an alt code
 
         # forward other key strokes
         else:
+            # if any other key than a numpad number is pressed within the altTimer,
+            # we assume that it's not intended to enter an alt code but a shortcut with ALT
+            # e.g. ALT+tab or ALT+F4
+            if(pressAlt and keyEvent.scancode != evdev.ecodes.KEY_LEFTALT):
+                if(altTimer): altTimer.cancel()
+                sendAlt(vinput)
+
             vinput.write(evdev.ecodes.EV_KEY, keyEvent.scancode, keyEvent.keystate)
             vinput.syn()
 
